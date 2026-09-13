@@ -1,0 +1,9 @@
+chromadb
+sentence-transformers
+langgraph
+langgraph-checkpoint-sqlite
+fastapi 
+uvicorn
+fastmcp
+jsonschema
+numpy
