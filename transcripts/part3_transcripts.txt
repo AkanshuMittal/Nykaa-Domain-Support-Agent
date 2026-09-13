@@ -1,0 +1,40 @@
+### python eval/rag_triad_eval.py ### 
+
+Indexed 37 fixed chunks into 'fixed_chunks_collection'
+Indexed 24 sentence chunks into 'sentence_chunks_collection'
+#   type         topic                  ctx_rel  ground   ans_rel  query
+----------------------------------------------------------------------------------------------------
+1   in_scope     return_window          0.629    0.903    0.633    How long do I have to return a beauty pr
+2   in_scope     cod_refund             0.769    0.867    0.783    When will my COD refund reach my bank ac
+3   in_scope     delivery_sla           0.786    0.867    0.766    How many days does standard delivery tak
+4   in_scope     reverse_pickup         0.815    0.9      0.792    Is reverse pickup available for my pin c
+5   in_scope     warranty_terms         0.6      0.9      0.609    Does my hair straightener come with a wa
+6   in_scope     order_cancellation     0.759    0.875    0.754    Can I cancel my order after it has shipp
+7   in_scope     loyalty_points         0.767    0.879    0.747    How do I redeem my NykaaPrive loyalty p
+8   in_scope     payment_failure        0.727    0.871    0.713    What happens if my payment fails during 
+9   in_scope     size_exchange          0.523    0.903    0.508    Can I exchange my shoes for a different 
+10  in_scope     damaged_item           0.656    0.909    0.639    My product arrived damaged, how do I rep
+11  in_scope     international_shipping 0.496    0.893    0.478    Can I place an international order from 
+12  in_scope     escalation_matrix      0.505    0.857    0.527    When does my complaint get escalated to 
+13  out_of_scope -                      0.091    0.0      0.078    What is the capital of France?
+14  out_of_scope -                      0.036    0.091    -0.093   How do I train a neural network from scr
+15  edge_case    return_window          0.542    0.9      0.531    returns?
+----------------------------------------------------------------------------------------------------
+AVERAGES over 15 queries:
+  avg context_relevance = 0.580
+  avg groundedness      = 0.774
+  avg answer_relevance  = 0.564
+
+
+
+
+### uvicorn api.main:app --reload --port 8000 ###
+
+query             : What's the return window for footwear?
+source            : rag
+answer            : Based on our policy: nd Footwear can be returned within 15 days as long as tags are attached and the item is unworn. Electronics and Home 
+                    appliances carry a shorter 10-day return window because these items are checked
+is_fallback       : False
+escalation_score  : 
+retrieved_doc_ids : {return_window, size_exchange}
+trace_id          : 15244a03-b8f2-4c91-8e47-f5863baf3559

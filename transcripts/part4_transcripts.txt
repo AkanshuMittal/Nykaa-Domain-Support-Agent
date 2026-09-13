@@ -1,0 +1,64 @@
+### python resilience/checkpointed_graph.py ###
+
+======================================================================
+STEP (a)+(b): first run — should stop BEFORE output_guardrail
+======================================================================
+[NODE] input_guardrail executing (trace_id=b2a5f6bf-30d4-4a7c-8501-dde3f4caddb9)
+[NODE] router executing (trace_id=b2a5f6bf-30d4-4a7c-8501-dde3f4caddb9)
+[NODE] order_lookup_node executing (trace_id=b2a5f6bf-30d4-4a7c-8501-dde3f4caddb9)
+
+Graph paused. Next node(s) to run: ('output_guardrail',)
+(only input_guardrail, router, order_lookup_node printed above — correct)
+
+======================================================================
+STEP (c): resuming the SAME thread_id with input=None
+======================================================================
+[NODE] output_guardrail executing (trace_id=b2a5f6bf-30d4-4a7c-8501-dde3f4caddb9)
+[NODE] memory_write executing (trace_id=b2a5f6bf-30d4-4a7c-8501-dde3f4caddb9)
+
+Only output_guardrail and memory_write should have printed just now —
+input_guardrail / router / order_lookup_node did NOT re-run, proving
+their results were loaded from the SQLite checkpoint.
+
+Final response after resume:
+{'query': "What's the status of order ORD-0002?", 'source': 'order_lookup', 'answer': 'Order ORD-0002: status=Refunded, value=₹7899, escalation_score=0.3333', 'is_fallback': False, 'escalation_score': 0.3333, 'retrieved_doc_ids': [], 'trace_id': 'b2a5f6bf-30d4-4a7c-8501-dde3f4caddb9'}
+
+
+
+
+
+### python resilience/timeouts_retries.py ###
+
+=== (a) Retry policy recovering a simulated transient failure ===
+[flaky_node] attempt #1
+[flaky_node] attempt #2
+[flaky_node] attempt #3
+Result: {'log': ['flaky_node succeeded on attempt #3']}
+Total attempts made: 3 (recovered within max_attempts=4)
+Elapsed time (reflects backoff waits): 1.74s
+
+=== (b) Per-node timeout firing a clean error (not a hang) ===
+Caught expected TimeoutError after 1.01s: Operation exceeded its 1.0s timeout — cancelled cleanly.
+(elapsed ~1s, NOT ~5s — proves this was a clean cancellation, not a hang)
+
+=== (c) Global timeout cancelling the whole run on total-time overrun ===
+Caught expected global TimeoutError after 1.50s: Operation exceeded its 1.5s timeout — cancelled cleanly.
+(elapsed ~1.5s, NOT ~3s — the whole run was cancelled, not just one node)
+
+
+
+
+### python python mcp\client.py ###
+
+Tools discovered on server: ['check_order_status']                                                                              
+
+MCP call for record_id='ORD-0001':
+  Standardized MCP response: CallToolResult(content=[TextContent(type='text', text='{"record_id":"ORD-0001","found":true,"status":"Returned","order_value_inr":9505,"escalation_score":0.24,"recommend_escalation":false}', annotations=None, meta=None)], structured_content={'record_id': 'ORD-0001', 'found': True, 'status': 'Returned', 'order_value_inr': 9505, 'escalation_score': 0.24, 'recommend_escalation': False}, meta={'io.modelcontextprotocol/serverInfo': {'name': 'nykaa-order-status-server', 'version': '4.0.3'}}, data={'record_id': 'ORD-0001', 'found': True, 'status': 'Returned', 'order_value_inr': 9505, 'escalation_score': 0.24, 'recommend_escalation': False}, is_error=False)
+
+MCP call for record_id='ORD-0002':
+  Standardized MCP response: CallToolResult(content=[TextContent(type='text', text='{"record_id":"ORD-0002","found":true,"status":"Refunded","order_value_inr":7899,"escalation_score":0.3333,"recommend_escalation":false}', annotations=None, meta=None)], structured_content={'record_id': 'ORD-0002', 'found': True, 'status': 'Refunded', 'order_value_inr': 7899, 'escalation_score': 0.3333, 'recommend_escalation': False}, meta={'io.modelcontextprotocol/serverInfo': {'name': 'nykaa-order-status-server', 'version': '4.0.3'}}, data={'record_id': 'ORD-0002', 'found': True, 'status': 'Refunded', 'order_value_inr': 7899, 'escalation_score': 0.3333, 'recommend_escalation': False}, is_error=False)
+
+MCP call for record_id='ORD-9999':
+  Standardized MCP response: CallToolResult(content=[TextContent(type='text', text='{"record_id":"ORD-9999","found":false,"error":"No order found with record_id=\'ORD-9999\'"}', annotations=None, meta=None)], structured_content={'record_id': 'ORD-9999', 'found': False, 'error': "No order found with record_id='ORD-9999'"}, meta={'io.modelcontextprotocol/serverInfo': {'name': 'nykaa-order-status-server', 'version': '4.0.3'}}, data={'record_id': 'ORD-9999', 'found': False, 'error': "No order found with record_id='ORD-9999'"}, is_error=False)
+
+

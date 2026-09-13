@@ -1,0 +1,176 @@
+### python dataset.py ###
+
+Total records: 60
+
+Count per category:
+  Apparel     :  16  [OK]
+  Electronics :  13  [OK]
+  Home        :  11  [OK]
+  Footwear    :   9  [OK]
+  Beauty      :  11  [OK]
+
+Count per status:
+  Placed      :   9  [OK]
+  Shipped     :  14  [OK]
+  Delivered   :  19  [OK]
+  Returned    :  10  [OK]
+  Refunded    :   8  [OK]
+
+delayed_shipment=True: 13/60 = 21.7%  [OK (within 10-30%)]
+
+Sample record:
+{'record_id': 'ORD-0001', 'category': 'Footwear', 'status': 'Returned','order_value_inr': 9505,
+        'days_since_created': 18, 'delayed_shipment': False}
+
+
+### python rag/chunking.py ###
+
+Fixed-size chunks:    37
+Sentence-based chunks: 24
+
+Sample fixed chunk: {'chunk_id': 'return_window::fixed::0', 'doc_id': 'return_window', 'text': 'Nykaa allows returns within 7 days of delivery for Beauty and personal-care items, provided the product is unopened and the seal is intact. Apparel and Footwear can be returned within 15 days as long'}
+
+Sample sentence chunk: {'chunk_id': 'return_window::sent::0', 'doc_id': 'return_window', 'text': 'Nykaa allows returns within 7 days of delivery for Beauty and personal-care items, provided the product is unopened and the seal is intact. Apparel and Footwear can be returned within 15 days as long as tags are attached and the item is unworn.'}
+
+
+### python rag/retrieve.py ###
+
+Indexed 37 fixed chunks into 'fixed_chunks_collection'
+Indexed 24 sentence chunks into 'sentence_chunks_collection'
+
+########## CALIBRATION (fixed_chunks_collection) ##########
+=== Threshold calibration ===
+
+In-scope queries:
+  top1_similarity=0.629  query='How long do I have to return a beauty product?'
+  top1_similarity=0.741  query='When will I get my refund for a COD order?'
+  top1_similarity=0.619  query='How many days does standard delivery usually take?'
+
+Out-of-scope queries:
+  top1_similarity=0.091  query='What is the capital of France?'
+  top1_similarity=0.036  query='How do I train a neural network from scratch?'
+
+min(in-scope)=0.619   max(out-of-scope)=0.091
+Clusters separate cleanly. Suggested threshold (midpoint): 0.355
+
+
+########## DEMO: 5 in-scope + 1 out-of-scope ##########
+
+Q: How long do I have to return a beauty product?
+top1_similarity=0.629  fallback=False
+A: Based on our policy: Nykaa allows returns within 7 days of delivery for Beauty and personal-care items, provided the product is unopened and the seal 
+
+Q: When will I get my refund for a COD order?
+top1_similarity=0.741  fallback=False
+A: Based on our policy: ey share verified account details through the app. Bank-account refunds for COD orders typically settle within 7-9 business days 
+
+Q: How many days does standard delivery usually take?
+top1_similarity=0.619  fallback=False
+A: Based on our policy: a 5-8 business day window. Express delivery, where available, promises next-day delivery for an additional fee. An order is treat
+
+Q: Can I exchange my shoes for a different size?
+top1_similarity=0.523  fallback=False
+A: Based on our policy: Apparel and Footwear orders are eligible for a one-time free size exchange within 15 days of delivery, subject to the requested s
+
+Q: What happens if my payment fails during checkout?
+top1_similarity=0.727  fallback=False
+A: Based on our policy: If a payment fails during checkout, the order is held in a 'PaymentPending' state for 15 minutes, during which the customer can 
+
+Q: What is the capital of France?
+top1_similarity=0.091  fallback=True
+A: I don't know — I couldn't find this in our policy documents.
+
+
+### rag/eval_retrieval.py ###
+
+Indexed 37 fixed chunks into 'fixed_chunks_collection'
+Indexed 24 sentence chunks into 'sentence_chunks_collection'
+
+=== fixed_chunks_collection ===
+
+Query: 'How long do I have to return a beauty product?'
+  relevant_doc_ids   = ['return_window']
+  top-3 unique docs = ['return_window', 'warranty_terms']
+  hits = ['return_window']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+Query: 'When will I get my refund for a COD order?'
+  relevant_doc_ids   = ['cod_refund']
+  top-3 unique docs = ['cod_refund']
+  hits = ['cod_refund']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+Query: 'How many days does standard delivery usually take?'
+  relevant_doc_ids   = ['delivery_sla']
+  top-3 unique docs = ['delivery_sla', 'size_exchange']
+  hits = ['delivery_sla']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+Query: 'Can I exchange my shoes for a different size?'
+  relevant_doc_ids   = ['size_exchange']
+  top-3 unique docs = ['size_exchange', 'return_window']
+  hits = ['size_exchange']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+Query: 'What happens if my payment fails during checkout?'
+  relevant_doc_ids   = ['payment_failure']
+  top-3 unique docs = ['payment_failure']
+  hits = ['payment_failure']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+fixed_chunks_collection AVERAGES over 5 queries:
+  avg Precision@3 = 0.333
+  avg Recall@3    = 1.000
+
+=== sentence_chunks_collection ===
+
+Query: 'How long do I have to return a beauty product?'
+  relevant_doc_ids   = ['return_window']
+  top-3 unique docs = ['warranty_terms', 'return_window']
+  hits = ['return_window']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+Query: 'When will I get my refund for a COD order?'
+  relevant_doc_ids   = ['cod_refund']
+  top-3 unique docs = ['cod_refund', 'order_cancellation']
+  hits = ['cod_refund']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+Query: 'How many days does standard delivery usually take?'
+  relevant_doc_ids   = ['delivery_sla']
+  top-3 unique docs = ['delivery_sla', 'damaged_item']
+  hits = ['delivery_sla']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+Query: 'Can I exchange my shoes for a different size?'
+  relevant_doc_ids   = ['size_exchange']
+  top-3 unique docs = ['size_exchange', 'reverse_pickup']
+  hits = ['size_exchange']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+Query: 'What happens if my payment fails during checkout?'
+  relevant_doc_ids   = ['payment_failure']
+  top-3 unique docs = ['payment_failure', 'order_cancellation']
+  hits = ['payment_failure']
+  Precision@3 = 1/3 = 0.333
+  Recall@3    = 1/1 = 1.000
+
+sentence_chunks_collection AVERAGES over 5 queries:
+  avg Precision@3 = 0.333
+  avg Recall@3    = 1.000
+
+
+=== RECOMMENDATION ===
+fixed_chunks_collection:    avg P@3=0.333, avg R@3=1.000
+sentence_chunks_collection: avg P@3=0.333, avg R@3=1.000
+
+[Fill this in after running with real embeddings:] State which collection scored higher andrecommend deploying that chunking strategy, citing the two avg P@3 / R@3 numbers above. If they tie, prefer sentence-based chunking since it never splits a sentence mid-thought, whichtends to keep retrieved context more coherent for the MOCK_LLM's template-based generation.
